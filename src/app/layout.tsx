@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import '@/styles/globals.css'
+import '@/index.css'
 
 export const metadata: Metadata = {
   title: 'Retro Player',
