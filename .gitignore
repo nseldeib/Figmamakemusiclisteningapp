@@ -1,0 +1,17 @@
+
+# CodeYam local files (contains secrets and local database)
+.codeyam
+
+# Dependencies
+node_modules
+
+# Next.js
+.next/
+out/
+
+# Environment variables
+.env*.local
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts

@@ -1,27 +1,13 @@
+'use client'
+
 import { useState, useEffect, useRef } from 'react'
 import { Play, Pause, SkipForward, SkipBack, Volume2 } from 'lucide-react'
-import { VinylRecord } from './components/VinylRecord'
-import { ToneArm } from './components/ToneArm'
-import { Slider } from './components/ui/slider'
-import { projectId, publicAnonKey } from './utils/supabase/info'
+import { VinylRecord } from '@/components/VinylRecord'
+import { ToneArm } from '@/components/ToneArm'
+import { Slider } from '@/components/ui/slider'
+import type { SpotifyTrack } from '@/types/spotify'
 
-interface SpotifyTrack {
-  name: string
-  artists: { name: string }[]
-  album: {
-    name: string
-    images: { url: string }[]
-  }
-  duration_ms: number
-}
-
-interface SpotifyDevice {
-  id: string
-  name: string
-  type: string
-}
-
-export default function App() {
+export default function HomePage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState<string | null>(null)
@@ -31,22 +17,6 @@ export default function App() {
   const [deviceId, setDeviceId] = useState<string | null>(null)
   const [player, setPlayer] = useState<any>(null)
   const tokenExpiryRef = useRef<number | null>(null)
-
-  // Load Spotify Web Playback SDK
-  useEffect(() => {
-    const script = document.createElement('script')
-    script.src = 'https://sdk.scdn.co/spotify-player.js'
-    script.async = true
-    document.body.appendChild(script)
-
-    window.onSpotifyWebPlaybackSDKReady = () => {
-      console.log('Spotify SDK ready')
-    }
-
-    return () => {
-      document.body.removeChild(script)
-    }
-  }, [])
 
   // Initialize Spotify Player when authenticated
   useEffect(() => {
@@ -68,7 +38,7 @@ export default function App() {
 
       spotifyPlayer.addListener('player_state_changed', (state: any) => {
         if (!state) return
-        
+
         setCurrentTrack(state.track_window.current_track)
         setIsPlaying(!state.paused)
       })
@@ -95,7 +65,7 @@ export default function App() {
     if (!refreshToken || !tokenExpiryRef.current) return
 
     const timeUntilExpiry = tokenExpiryRef.current - Date.now() - 60000 // Refresh 1 min before expiry
-    
+
     if (timeUntilExpiry <= 0) {
       refreshAccessToken()
       return
@@ -109,17 +79,16 @@ export default function App() {
     if (!refreshToken) return
 
     try {
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-a350608d/spotify/refresh`, {
+      const response = await fetch('/api/spotify/refresh', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
         },
         body: JSON.stringify({ refreshToken })
       })
 
       const data = await response.json()
-      
+
       if (data.accessToken) {
         setAccessToken(data.accessToken)
         tokenExpiryRef.current = Date.now() + (data.expiresIn * 1000)
@@ -132,22 +101,15 @@ export default function App() {
   const handleSpotifyLogin = async () => {
     try {
       // First, get the Spotify auth URL from our server
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-a350608d/spotify/auth-url`,
-        {
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`
-          }
-        }
-      )
-      
+      const response = await fetch('/api/spotify/auth-url')
+
       const { authUrl } = await response.json()
-      
+
       const width = 500
       const height = 700
       const left = window.screenX + (window.outerWidth - width) / 2
       const top = window.screenY + (window.outerHeight - height) / 2
-      
+
       const popup = window.open(
         authUrl,
         'Spotify Login',
@@ -175,7 +137,7 @@ export default function App() {
 
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-a350608d/spotify/api/${endpoint}`,
+        `/api/spotify/api/${endpoint}`,
         {
           method,
           headers: {
@@ -223,7 +185,7 @@ export default function App() {
     const fetchAndPlayMusic = async () => {
       // Get user's top tracks
       const topTracks = await spotifyApiCall('me/top/tracks?limit=1')
-      
+
       if (topTracks?.items?.[0]) {
         // Start playing on this device
         await spotifyApiCall(`me/player/play?device_id=${deviceId}`, 'PUT', {
@@ -282,7 +244,7 @@ export default function App() {
           {/* Vinyl and Tone Arm */}
           <div className="flex justify-center mb-8 relative">
             <div className="relative">
-              <VinylRecord 
+              <VinylRecord
                 albumArt={currentTrack?.album?.images?.[0]?.url}
                 isPlaying={isPlaying}
               />
